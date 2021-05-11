@@ -1,0 +1,291 @@
+\documentclass[a4paper,12pt,authoryear]{elegantpaper}
+    \usepackage[ruled,linesnumbered]{algorithm2e}
+    \usepackage{hyperref}
+    \title{Report: Federal Learning with Statistical Heterogeneous}
+    \author{Ziyang Gong \thanks{Email: \email{meetziyang@outlook.com}}}
+    \institute{School of Statistics, Southwest University of Finance and Economics}
+    \date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    With the increasing number of mobile phones, wearable devices, and autonomous vehicles, the natural idea is to store data locally and push the computation from the centre server to the whole network's edge device, termed "Federal Learning". Although this method has obvious advantages in computational efficiency and data magnitude, it also has many challenges. This report will mainly discuss the challenge of statistical heterogeneity because the data stored on each device is collected by the individual devices/users. Moreover, we summarize some of the articles mentioned by \cite{li_federated_2020}, and then recurrent part of the experimental results.
+    \keywords{Federal Learning, Statistical Heterogeneous, Multi-task Learning}
+\end{abstract}
+
+\section{Introduction}
+
+The number of mobile phones, wearable devices, and autonomous vehicles is increasing day by day, divided into several distributed networks. Standing in front of the scene of improving devices/users' experience by setting up models, making full use of these distributed networks is a challenging but exciting field. Based on the features of these distributed networks:
+
+\begin{itemize}
+    \item The distributed networks have increasing computational power on each device, which may be a surplus for existing applications.
+    \item Moreover, with the storage and wealthy sensors on each device (such as cameras, microphones, and GPS), it is easier to access a large amount of data; most of them are private.
+\end{itemize}
+
+With the above features of the distributed network, a natural idea is storing data locally and pushing the computation from the centre server to the whole network's edge device. This method is called "Federal Learning". The term "Federal Learning" was first proposed by \cite{mcmahan_communication-efficient_2017}, that,
+
+\begin{quote}
+    The learning task is solved by a loose federation of participating devices (which we refer to as clients) coordinated by a central server.
+\end{quote}
+
+In summary, the federal learning problem can be formulated as the following procedures \citep{kairouz_advances_2021}:
+\begin{enumerate}
+    \item Client Selection: The server samples from a set of clients meeting eligibility requirements.
+    \item Broadcast: The selected clients download the current model weights and a training program from server.
+    \item Client Computation: Each selected device locally computes an update to the model by executing the training program.
+    \item Aggregation: The server collects an aggregate of the device updates.
+    \item Model Update: The server locally updates the shared model based on the aggregated update computed from the clients that participated in the current round.
+\end{enumerate}
+
+Through the above-mentioned multiple rounds of learning and communication methods, federated learning eliminates the need to aggregate all data on a single device, overcomes privacy and communication challenges in machine learning tasks, and allows machine learning model learning to be distributed on individual devices/users stored data.
+
+The challenge of federal learning, as \cite{li_federated_2020} saying, are also various, such as communication efficiency, systems heterogeneity, statistical heterogeneity, and privacy.
+
+In this report, we focus on the topic of statistical heterogeneity. In the application scenario of federated learning, the data stored on each device is collected by the individual devices/users, which may be significantly different from other devices/users, different devices/users' non-homologous data have different distribution characteristics. So the local data set of any specific devices/users cannot represent the overall distribution. Therefore, for federated learning, a core challenge is "how to deal with non-independent and identically distributed data from separated devices/users?".
+
+In order to solve this heterogeneity challenges, an effective method is to perform personalized processing at the device, data, and model level to reduce heterogeneity and obtain a high-quality personalized model for each device, that is, personalized federated learning.
+
+As \cite{kulkarni_survey_2020} mentioned, the method to handle statistical heterogeneity can be classified as several techniques, such as averaging, adding user context, transfer learning, multi-task learning, meta-learning, knowledge distillation, base \& personalization layers and the mixture of global and local models et al. The paper we discussed in this report which mentioned by \cite{li_federated_2020} can be mainly divided into two parts according to the above standard,
+\begin{enumerate}
+    \item Averaging:
+          \begin{itemize}
+              \item Communication-EfficientLearning of Deep Networks from Decentralized Data \citep{mcmahan_communication-efficient_2017}
+              \item Federated Learning with Non-IID Data \citep{zhao_federated_2018}
+          \end{itemize}
+    \item Multi-task Learning:
+          \begin{itemize}
+              \item Federated multi-task learning \citep{smith_federated_2017}
+              \item Variational Federated Multi-Task Learning \citep{corinzia_variational_2021}
+          \end{itemize}
+\end{enumerate}
+then we will introduce the paper by the techniques topic, explore their methods advantage and disadvantages, and make recurrent experimental, etc.
+
+\section{Related Works}
+
+For convenience, we will introduce the universal symbols for the below federal learning methods in this section, and in order to unify the expression, we refer to the devices/users in the distributed network as clients, and the client for centralized computing is called a server. Suppose the distributed networks has the following property,
+\begin{itemize}
+    \item the number of clients in the distributed networks is $K$,
+    \item the dataset in client $k$ is $\mathcal{D}_{k}=\{\mathbf{x}_{k}^{i},y_{k}^{i}\}_{i=1}^{n_{k}}$, that there is $n_{k}$ samples in client $k$,
+\end{itemize}
+and during the broadcast and client computation procedures of the federal learning, which can be also known as hyper-parameters,
+\begin{itemize}
+    \item the fraction of used clients at each iteration is $C$,
+    \item the number of federal learning rounds is $T$,
+    \item the number of local updates is $E$,
+    \item local batch size used at each learning iteration $B$,
+    \item local learning rate $\eta$.
+\end{itemize}
+
+\subsection{Averaging}
+
+\paragraph{FedAvg Method by \cite{mcmahan_communication-efficient_2017}}
+
+This method is a basic framework for the following few articles we will introduce, and it is also a classic training process in the field of federated learning. And the goal of this method is to minimize the following objective function:
+\begin{equation}
+    \min_{\mathbf{w}}\ell(\mathbf{w}),\quad\text{where}\quad\ell(\mathbf{w})=\sum_{k=1}^{m}\rho_{k}\ell_{k}(\mathbf{w}),
+\end{equation}
+where, $m$ is the total number of selected devices, $\rho_{k}\geq 0$ and $\sum_{k=1}^{m}\rho_{k}=1$, and $\ell_{k}$ is the local objective function for the $k$-th device.
+
+This method is relatively simple and is an extension of the SGD method. However, this method's idea is to decompose the global objective function into multiple local objective functions as implied by the objective function mentioned above. Moreover, this idea solves a core challenge in federal learning that can separately train the clients and depart from the need to access raw training data directly. The detaild algorithm is shown in Algorithm \ref{algorithm:fedavg}.
+
+\begin{algorithm}
+    \KwIn{data $\mathcal{D}_{k}$ from client $k=1,2,\ldots,K$, number of federated learning rounds $T$, fraction of clients used at each iteration for each client $C$, number of local updates $E$, local batch size used at each learning iteration $B$, local learning rate $\eta$}
+    \KwOut{estimated model weight $w$}
+    initialize model weight be $w^{(0)}$\;
+    \For{round $t=1,2,\ldots,T$}{
+    let $S^{(t)}$ be the random selected $(C\times K)$ clients\;
+    \For{client $k$ in $S^{(t)}$}{
+        $w_{k}^{(t)}\leftarrow w^{(t-1)}$\;
+        \For{local epoch $e=1,2,\ldots,E$}{
+            \For{batch $b$ with batch size $B$ in $\mathcal{D}_{k}$}{
+                $w_{k}^{(t)}\leftarrow w_{k}^{(t)}-\eta\nabla\ell(w_{k}^{(t)};b)$\;
+            }
+        }
+    }
+    $w^{(t)}\leftarrow\frac{\sum_{k\in S^{(t)}}n_{k}w_{k}^{(t)}}{\sum_{k\in S^{(t)}}n_{k}}$\;
+    }
+    $w\leftarrow w^{(T)}$\;
+    \caption{FedAvg: Federated Averaging Method by \cite{mcmahan_communication-efficient_2017}}\label{algorithm:fedavg}
+\end{algorithm}
+
+Another important finding in this paper was that we must average the models in different clients with the same initial parameters. Hence, this method enforces each local model parameters during the reporting procedure during each round to be the same.
+
+The FedAvg method is a version of an implementation of classic federal learning framework, which build a global model for each client in the distributed networks. This method is simple but effective and has also been proved to achieve convergence in IID and Non-IID by \cite{li_convergence_2020}.
+
+\paragraph{FedAvg (data-sharing) by \cite{zhao_federated_2018}}
+
+\cite{zhao_federated_2018} propose a data-sharing strategy to improve FedAvg with non-IID data by creating a small subset of globally shared data between all the edge devices. In addition to the proposed data sharing method, this paper also proves that the classical federal learning algorithm FedAvg will perform poorly for the non-IID data. This paper also defines "Weight Divergence" and indicates that it is the main reason for the performance degradation of FedAvg for the non-IID data.
+
+The proposed strategy shows exciting results, though it sacrifices part of personal privacy and transmission efficiency. As stated in the article, when 5\% of all data is shared, nearly 30\% can improve the performance of the Cifar10 dataset.
+
+\subsection{Multi-task Learning}
+
+\paragraph{MOCHA Method by \cite{smith_federated_2017}}
+
+This method was inspired by multi-task learning, can allow for personalization by learning separate but related models for each device while leveraging a shared representation. And MOCHA method is based on a general multi-task Learning framework that based on the below objective function
+\begin{equation}
+    \min_{\mathbf{W},\mathbf{\Omega}}\left\{\sum_{k=1}^{K}\ell_{t}\left(\mathbf{w}_{k};\mathcal{D}_{k}\right)+\mathcal{R}(\mathbf{W},\mathbf{\Omega})\right\},
+\end{equation}
+where $\mathbf{W}=(\mathbf{w}_{1},\mathbf{w}_{2},\ldots,\mathbf{w}_{K})$ is the matrix of the $t$-th column is the weight vector for the client $k$, and $\mathbf{\Omega}$ models relationships amongst clients, which either known a priori or estimated while simultaneously learning clients weight, and the penalty term can be expressed as the bi-convex formulation
+\begin{equation}
+    \mathcal{R}(\mathbf{W},\mathbf{\Omega})=\lambda_{1}\operatorname{tr}\left(\mathbf{W}\mathbf{\Omega}\mathbf{W}^{T}\right)+\lambda_{2}\|\mathbf{W}\|_{F}^{2},
+\end{equation}
+with constants $\lambda_{1},\lambda_{2}>0$.
+
+Multi-task learning problems differ based on their assumptions on $\mathcal{R}$, which takes $\mathbf{\Omega}$ as input and promotes some suitable structure amongst the tasks. Moreover, MOCHA method used the below penalty term,
+\begin{equation}
+    \mathcal{R}(\mathbf{W},\mathbf{\Omega})=\lambda\left(\frac{1}{\sigma^{2}}\|\mathbf{W}\|^{2}+\operatorname{tr}\left(\mathbf{W}\mathbf{\Omega}^{-1}\mathbf{W}^{T}\right)\right),\mathbf{\Omega}\in\mathcal{Q}=\{\mathbf{Q}\mid\mathbf{Q}\succeq 0,\operatorname{tr}(\mathbf{Q})=1\},
+\end{equation}
+which under the assumption that weight matrix has a probabilistic priors, the detailes can be seen in \cite{zhang_convex_2010}.
+
+With the assumptions established by \cite{smith_federated_2017}, MOCHA can be distributed solved with below data-local quadratic subproblems, for client $k$,
+\begin{equation}
+    \min_{\Delta\mathbf{\alpha}_{k}}\mathcal{G}_{k}^{\sigma^{\prime}}\left(\Delta\mathbf{\alpha}_{k};\mathbf{v}_{k},\mathbf{\alpha}_{k}\right)=\sum_{i=1}^{n_{k}}\ell_{k}^{*}\left(-\mathbf{\alpha}_{k}^{i}-\Delta\mathbf{\alpha}_{k}^{i}\right)+\left\langle\mathbf{w}_{k}(\mathbf{\alpha}),\mathbf{X}_{k}\Delta\mathbf{\alpha}_{k}\right\rangle+\frac{\sigma^{\prime}}{2}\left\|\mathbf{X}_{k}\Delta\mathbf{\alpha}_{k}\right\|_{\mathbf{M}_{k}}^{2}+c(\mathbf{\alpha})
+\end{equation}
+where $\ell_{k}^{*}$ and $\mathcal{R}^{*}$ are the conjugate dual functions of $\ell_{k}$ and $\mathcal{R}$, respectively, $\mathbf{\alpha}_{k}^{i}$ is the dual variable for the data point $\left(\mathbf{x}_{k}^{i},y_{k}^{i}\right)$, $c(\mathbf{\alpha})=\frac{1}{m}\mathcal{R}^{*}(\mathbf{X}\mathbf{\alpha})$, and $\mathbf{M}_{k}$ is the $k$-th diagonal block of the symmetric positive define matrix $M$. Suppose $\mathbf{X}=\operatorname{diag}\left(\mathbf{X}_{1},\mathbf{X}_{2},\ldots,\mathbf{X}_{K}\right)$, then $\mathbf{W}$ can be found via $\mathbf{w}(\mathbf{\alpha})=\nabla\mathcal{R}^{*}(\mathbf{X}\mathbf{\alpha})$, where $\mathbf{w}_{k}(\mathbf{\alpha})$ is the $k$-th block in the vector $\mathbf{w}(\mathbf{\alpha})$.
+
+The detaild algorithm is shown in Algorithm \ref{algorithm:mocha}.
+
+\begin{algorithm}
+    \KwIn{data $\mathcal{D}_{k}$ from client $k=1,2,\ldots,K$, number of federated learning rounds $T$}
+    \KwOut{estimated local clients model weights $\mathbf{W}=(\mathbf{w}_{1},\mathbf{w}_{2},\ldots,\mathbf{w}_{K})$}
+    initialize $\mathbf{\alpha}_{k}=\mathbf{0},\mathbf{v}_{k}=\mathbf{0},k=1,2,\ldots,K$\;
+    \For{round $t=1,2,\ldots,T$}{
+    \For{client $k=1,2,\ldots,K$}{
+    $\Delta\mathbf{\alpha}_{k}\leftarrow\arg\min_{\Delta\mathbf{\alpha}_{k}}\mathcal{G}_{k}^{\sigma^{\prime}}\left(\Delta\mathbf{\alpha}_{k};\mathbf{v}_{k},\mathbf{\alpha}_{k}\right)$\;
+    $\mathbf{\alpha}_{k}\leftarrow\mathbf{\alpha}_{k}+\Delta\mathbf{\alpha}_{k}$\;
+    $\Delta\mathbf{v}_{k}\leftarrow\mathbf{X}_{k}\Delta\mathbf{\alpha}_{k}$\;
+    $\mathbf{v}_{k}\leftarrow\mathbf{v}_{k}+\Delta\mathbf{v}_{k}$\;
+    }
+    update $\mathbf{\Omega}$ based on $\mathbf{w}(\mathbf{\alpha})$ for latest $\alpha$\;
+    }
+    computes $\mathbf{w}=\mathbf{w}(\mathbf{\alpha})$ based on the lastest $\alpha$\;
+    \caption{MOCHA: Federated Multi-task Learning Method by \cite{smith_federated_2017}}\label{algorithm:mocha}
+\end{algorithm}
+
+This method has provable theoretical convergence guarantees for the considered objectives but is limited in its ability to scale to massive networks and is restricted to convex objectives.
+
+\paragraph{VIRTUAL Method by \cite{corinzia_variational_2021}}
+
+MOCHA method is an effective paradigm for real-world datasets, though it has been applied only on convex models. In order to apply to the general non-convex situation, VIRTUAL has been proposed.
+
+This method assumes a star-shaped Bayesian network with a server $S$ with model parameters $\mathbf{\theta}$, as well as $K$ clients with model parameters $\mathbf{W}=(\mathbf{w}_{1},\mathbf{w}_{2},\ldots,\mathbf{w}_{K})$. Following a Bayesian approach, this method assume a prior distribution over all network parameters $p\left(\mathbf{\theta},\mathbf{w}_{1},\mathbf{w}_{2},\ldots,\mathbf{w}_{K}\right)$. The posterior distribution over all parameters, given all datasets $\mathcal{D}=\left(\mathcal{D}_{1},\mathcal{D}_{2},\ldots,\mathcal{D}_{k}\right)$ is
+\begin{equation}
+    p\left(\mathbf{\theta},\mathbf{w}_{1},\mathbf{w}_{2},\ldots,\mathbf{w}_{K}\mid\mathcal{D}\right)\propto\frac{\prod_{k=1}^{K}p\left(\mathbf{\theta},\mathbf{w}_{\mathbf{k}} \mid \mathcal{D}_{i}\right)}{p(\mathbf{\theta})^{K-1}}.
+\end{equation}
+
+The posterior given above is in general intractable and this method uses an approximation inference scheme, which propose an expectation propagation (EP) method to calculate the posterior. This method define a proxy posterior distribution that factorizes into a server
+and a client contribution for every client $k$ as
+\begin{equation}
+    q(\mathbf{\theta},\mathbf{W})=\left(\prod_{k=1}^{K}s_{k}(\mathbf{\theta})\right)\left(\prod_{k=1}^{K}c_{k}\left(\textbf{w}_{k}\right)\right),
+\end{equation}
+which allows to perform a client update that is independent of other clients, and to perform a server update in aggregated posterior. Then the proxy pdf $s_{k}^{(t)}(\mathbf{\theta})$ and $c_{k}^{(t)}\left(\mathbf{w}_{k}\right)$ at round $t$ and client $k$ are found minimizing the variational free energy function
+\begin{equation}
+    \begin{array}{c}
+        \ell_{k}\left(s_{k}(\mathbf{\theta}),c_{k}\left(\mathbf{w}_{k}\right);p(\mathbf{\theta}),p(\mathbf{w}_{k})\right) = D_{KL}\left(s_{k}(\left.\mathbf{\theta})\frac{s^{(t-1)}(\mathbf{\theta})}{s_{k}^{(t-1)}(\mathbf{\theta})}\right\|p(\mathbf{\theta})^{\frac{1}{K}}\frac{s^{(t-1)}(\mathbf{\theta})}{s_{k}^{(t-1)}(\mathbf{\theta})}\right) \\
+        +D_{KL}\left(c_{k}\left(\textbf{w}_{k}\right)\|p\left(\textbf{w}_{k}\right)\right)-\mathbb{E}_{s^{(t)}(\mathbf{\theta}),c_{k}(\mathbf{w}_{k})}\log p\left(\mathcal{D}_{k}\mid\mathbf{\theta},\mathbf{w}_{i}\right)                                                                                                                            \\
+    \end{array}
+\end{equation}
+where $s^{(t)}(\mathbf{\theta})=s_{k}(\mathbf{\theta})\prod_{j\neq k}s_{j}^{(t-1)}(\mathbf{\theta})$.
+
+For simplicity, this method uses a Gaussian meanfield approximation of the posterior, hence for server and client parameters, the factorization respectively is
+\begin{equation}
+    s_{k}(\mathbf{\theta})=\prod_{d}\mathcal{N}\left(\theta_{d}\mid\mu_{kd}^{s},\sigma_{kd}^{s}\right),\quad c_{k}\left(\mathbf{w}_{k}\right)=\prod_{d}\mathcal{N}\left(w_{kd}\mid\mu_{kd}^{c}, \sigma_{kd}^{c}\right).
+\end{equation}
+
+The detaild algorithm is shown in Algorithm \ref{algorithm:virtual}.
+
+\begin{algorithm}
+    \KwIn{data $\mathcal{D}_{k}$ from client $k=1,2,\ldots,K$, prior distributions $p(\mathbf{\theta}),\left\{p\left(\mathbf{w}_{1}\right),p\left(\mathbf{w}_{2}\right),\ldots,p\left(\mathbf{w}_{K}\right)\right\}$, number of federated learning rounds $T$, fraction of clients used at each iteration for each client $C$, number of local updates $E$, local batch size used at each learning iteration $B$, local learning rate $\eta$}
+    \KwOut{estimated posterior distributions $s_{k}(\mathbf{\theta}),c_{k}\left(\mathbf{w}_{k}\right)$}
+    initialize all pdfs $s_{k}^{(0)}(\mathbf{\theta}),c_{k}^{(0)}\left(\mathbf{w}_{k}\right)$\;
+    $s^{(0)}(\mathbf{\theta})\leftarrow\prod_{i}s_{i}^{(0)}(\mathbf{\theta})$\;
+    \For{round $t=1,2,\ldots,T$}{
+    let $S^{(t)}$ be the random selected $(C\times K)$ clients\;
+    \For{client $k$ in $S^{(t)}$}{
+    receive $s^{(t-1)}$ from server\;
+    $s_{k}^{(t)}(\mathbf{\theta}),c_{k}^{(t)}\left(\mathbf{w}_{k}\right)$ joint optimization of $\ell_{k}$ with $E$ epochs and $B$ batch size\;
+    $\Delta_{k}^{(t)}(\mathbf{\theta})\leftarrow\frac{s_{k}^{(t)}(\mathbf{\theta})}{s_{k}^{(t-1)}(\mathbf{\theta})}$\;
+    }
+    $\Delta(\mathbf{\theta})\leftarrow\prod_{k\in S^{(t)}}\Delta_{k}(\mathbf{\theta})$\;
+    $s^{(t)}(\mathbf{\theta})\leftarrow s^{(t-1)}(\mathbf{\theta})\Delta(\mathbf{\theta})$\;
+    }
+    $s_{k}^{(t)}(\mathbf{\theta})\leftarrow s_{k}^{(T)}(\mathbf{\theta})$\;
+    $c_{k}^{(t)}\left(\mathbf{w}_{k}\right)\leftarrow c_{k}^{(T)}\left(\mathbf{w}_{k}\right)$\;
+    \caption{VIRTUAL: Variational Federated Multi-task Learning Method by \cite{corinzia_variational_2021}}\label{algorithm:virtual}
+\end{algorithm}
+
+Although this method can handle non-convex models, it is expensive to generalize to large federated networks.
+
+\subsection{Summaries}
+
+All in all, we will here make a summary of the papers we discussed above, and the results can be seen in the Table \ref{table:summaries}.
+
+\begin{table}[hpt]
+    \centering
+    \caption{Summaries of Federal Learning Methods for Statistical Heterogeneous}
+    \label{table:summaries}
+    \begin{tabular}{llp{0.25\linewidth}p{0.25\linewidth}}
+        \toprule
+        Method         & Features            & Advantage                                                     & Disadvantage                                                        \\
+        \midrule
+        FedAvg         & Averaging           & Simple model structure, Effective calculation                 & Poor performance on non-IID data                                    \\
+        FedAvg (Share) & Averaging           & Partially solve the problem of poor performance under non-IID & Sacrifice part of personal privacy and communication efficiency     \\
+        MOCHA          & Multi-task Learning & Good predictability and convergence for non-IID data          & Unable to scale to massive networks and to solve non-convex problem \\
+        VIRTUAL        & Multi-task Learning & Extend MOCHA method to non-convex problem                     & Unable to scale to massive networks                                 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Recurrent Experimental Results}
+
+Due to time and computing power constraints, here we only reproduce two papers \citep{mcmahan_communication-efficient_2017,smith_federated_2017} that have official codes and are easy to implement, and we modify them based on the following code repositories:
+\begin{itemize}
+    \item FedAvg \citep{jadhav_ashwinrjfederated-learning-pytorch_2021}: \url{https://github.com/AshwinRJ/Federated-Learning-PyTorch}
+    \item MOCHA \citep{gingsmith_gingsmithfmtl_2021}: \url{https://github.com/gingsmith/fmtl}
+\end{itemize}
+And, we will make certain modifications to them to make them fit our next data set and experimental settings.\footnote{The recurrent experiment code is avaliable at \url{https://github.com/SignorinoY/overlord}.}
+
+\paragraph{Dataset Description}
+
+In order to generate non-IID data, we follow the datasets and experiment settings by \cite{corinzia_variational_2021} to be used in the recurrent experiments, that,
+
+% \textbf{MNIST}\footnote{Dataset is avaliable at \url{http://yann.lecun.com/exdb/mnist/}}: The MNIST database of handwritten digits images, from 0 to 9. Each image is 28 pixels in height and 28 pixels in width, for a total of 784 pixels in total. The whole dataset has a training set of 60,000 examples, and a test set of 10,000 examples \citep{lecun_mnist_2010}. We sort the data by digit label, divide it into 200 sub-datasets of size 300, and assign each clients 2 sub-datasets. This is a pathological non-IID partition of the data, as most clients will only have examples of three digits.
+
+\textbf{Human Activity Recognition}\footnote{Dataset is avaliable at \url{https://archive.ics.uci.edu/ml/datasets/human+activity+recognition+using+smartphones}}: Mobile phone accelerometer and gyroscope data collected from 30 individuals, performing one of six activities: \{walking, walking-upstairs, walking-downstairs, sitting, standing, lying-down\}\citep{garcia-gonzalez_public_2020}. We use the provided 561 -length feature vectors of time and frequency domain variables generated for each instance. We model each individual as a separate client.
+
+\paragraph{Experimental Setting}
+
+The detaild settings for different approaches are as followed,
+\begin{itemize}
+    \item FedAvg: We consider a multilayer perceptrons (MLP) with two hidden dense layers with 100 units and ReLU activation functions in the hidden layers, and softmax activation at the output layer.
+    \item MOCHA: In order to select the best regularization parameter,$\lambda\in\{1e-5, 1e-4, 1e-3, 1e-2, 0.1, 1, 10\}$, for MOCHA model using 5-fold cross-validation.
+\end{itemize}
+
+\paragraph{Experiment Results}
+
+We explored the accuracy and convergence speed of the FedAvg and MOCHA methods on the dataset Huaman Activity Recognition (HAR). We conducted experiments according to the aforementioned experimental settings. The specific results are shown in the Table \ref{table:prediction-error}.
+
+\begin{table}[hpt]
+    \centering
+    \caption{Prediction Error for FedAvg and MOCHA on HAR dataset}
+    \label{table:prediction-error}
+    \begin{tabular}{cc}
+        \toprule
+        Method & MSE         \\
+        \midrule
+        FedAvg & 0.51 (0.62) \\
+        MOCHA  & 0.46 (0.11) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Conclusion}
+
+Based on the above papers' theoretical analysis and experimental results, combined with our recurring results, it can be seen that personalized federated learning can indeed improve the effectiveness of the classic federated learning method, especially can effectively deal with statistical heterogeneity. At the same time, federated learning has huge application requirements in various practical scenarios. We will continue to pay attention to the technical development and deployment, and application methods of personalized federal learning.
+
+\clearpage
+\bibliography{reference}
+\end{document}
